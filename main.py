@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import models  # noqa: F401  (importing registers the tables on Base)
 from app.database import Base, engine
 from app.routers.users import router as users_router
+from app.routers.calculations import router as calculations_router
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +31,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(users_router)
+app.include_router(calculations_router)
 
 @app.get("/health")
 def health():
