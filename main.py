@@ -8,12 +8,26 @@ from fastapi.exceptions import RequestValidationError
 from app.operations.operations import add, subtract, multiply, divide  # Ensure correct import path
 import uvicorn
 import logging
+from contextlib import asynccontextmanager
+from sqlalchemy.exc import SQLAlchemyError
+from app import models  # noqa: F401  (importing registers the tables on Base)
+from app.database import Base, engine
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Create the database tables at startup. The app still starts if the database is down."""
+    try:
+        Base.metadata.create_all(engine)
+    except SQLAlchemyError as error:
+        logger.warning("Could not create database tables: %s", error)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 def health():
