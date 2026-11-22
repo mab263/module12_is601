@@ -1,14 +1,16 @@
-"""Fixtures that give integration tests a real Postgres database."""
+"""Fixtures that give integration tests a real Postgres database and an API client."""
 
 import os
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 
-import app.models  # noqa: F401  (importing registers the User table on Base)
-from app.database import Base
+import app.models  # noqa: F401  (importing registers the tables on Base)
+from app.database import Base, get_db
+from main import app as fastapi_app
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
@@ -44,3 +46,28 @@ def db_session(db_engine):
         with db_engine.begin() as connection:
             for table in reversed(Base.metadata.sorted_tables):
                 connection.execute(table.delete())
+
+
+@pytest.fixture
+def api_client(db_engine, db_session):
+    """A test client whose requests use the test database, with a new session per request."""
+    request_session = sessionmaker(bind=db_engine, expire_on_commit=False)
+
+    def override_get_db():
+        session = request_session()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    yield TestClient(fastapi_app)
+    fastapi_app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def validation_status(api_client):
+    """The status code this app returns for invalid request data."""
+    status_code = api_client.post("/users/login", json={}).status_code
+    assert status_code in (400, 422)
+    return status_code
