@@ -33,7 +33,7 @@ def compute_result(data: CalculationCreate) -> float:
     result = CalculationFactory.calculate(data.type, data.a, data.b)
     if not math.isfinite(result):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Result is out of range",
         )
     return result
