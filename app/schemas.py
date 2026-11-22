@@ -84,3 +84,16 @@ class CalculationRead(BaseModel):
     result: float
     user_id: Optional[int] = None
     created_at: datetime
+    
+class UserLogin(BaseModel):
+    """Credentials sent to log in. The 'username' may be a username or an email address."""
+
+    username: str = Field(min_length=1, max_length=255)
+    password: str = Field(min_length=1)
+
+
+class LoginResponse(BaseModel):
+    """Returned after a successful login. It carries only the public user details."""
+
+    message: str
+    user: UserRead
